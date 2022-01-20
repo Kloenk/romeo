@@ -1,4 +1,4 @@
-use Mix.Config
+import Config
 
 config :ex_unit, :assert_receive_timeout, 2000
 
@@ -8,6 +8,8 @@ config :mnesia, dir: 'mnesia'
 
 config :sasl, sasl_error_logger: false
 
-config :ejabberd,
-  file: "config/ejabberd.yml",
-  log_path: "logs/ejabberd.log"
+if Mix.env() == :test do
+  config :ejabberd,
+         file: "config/ejabberd.yml",
+         log_path: "logs/ejabberd.log"
+end

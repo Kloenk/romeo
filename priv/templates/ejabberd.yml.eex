@@ -83,12 +83,8 @@ modules:
   mod_blocking: {}
   mod_caps: {}
   mod_carboncopy: {}
-  mod_client_state:
-    drop_chat_states: true
-    queue_presence: false
   mod_configure: {}
   mod_disco: {}
-  mod_irc: {}
   mod_http_bind: {}
   mod_last: {}
   mod_muc:

@@ -14,7 +14,8 @@ defmodule Romeo.Mixfile do
      deps: deps(),
      docs: docs(),
      package: package(),
-     test_coverage: [tool: ExCoveralls]]
+     #test_coverage: [tool: ExCoveralls]
+    ]
   end
 
   def application do
@@ -27,14 +28,15 @@ defmodule Romeo.Mixfile do
   end
 
   defp deps do
-    [{:connection, "~> 1.0"},
+    [{:connection, "~> 1.1"},
      {:fast_xml, "~> 1.1"},
 
      # Docs deps
-     {:ex_doc, "~> 0.18", only: :dev},
+     {:ex_doc, ">= 0.0.0", only: :dev},
 
      # Test deps
-     {:ejabberd, github: "scrogson/ejabberd", branch: "fix_mix_compile", only: :test},
+     #{:ejabberd, github: "scrogson/ejabberd", branch: "fix_mix_compile", only: :test},
+     {:ejabberd, "~> 21.12", only: :test},
      {:excoveralls, "~> 0.8", only: :test}]
   end
 
