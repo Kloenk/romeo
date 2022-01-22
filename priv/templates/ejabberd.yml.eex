@@ -1,4 +1,4 @@
-loglevel: 0
+loglevel: 4
 
 hosts:
   - "localhost"
@@ -26,6 +26,7 @@ listen:
         password: "secret"
 
 auth_method: internal
+resource_conflict: closeold
 
 shaper:
   normal: 1000
@@ -39,39 +40,25 @@ acl:
   loopback:
     ip:
       - "127.0.0.0/8"
+      - "::1"
 
-access:
-  max_user_sessions:
-    all: 10
-  max_user_offline_messages:
-    admin: 5000
-    all: 100
+access_rules:
   local:
-    local: allow
+    - allow: local
   c2s:
-    blocked: deny
-    all: allow
-  c2s_shaper:
-    admin: none
-    all: normal
-  s2s_shaper:
-    all: fast
-  announce:
-    admin: allow
+    - deny: blocked
+    - allow
   configure:
-    admin: allow
-  muc_admin:
-    admin: allow
-  muc_create:
-    local: allow
-  muc:
-    all: allow
-  pubsub_createnode:
-    local: allow
-  register:
-    all: allow
-  trusted_network:
-    loopback: allow
+    - allow
+  something:
+    - allow
+  s2s_banned:
+    - allow
+  xmlrpc_access:
+    - allow:
+        - ip:
+          - "127.0.0.0/8"
+          - "::1"
 
 language: "en"
 

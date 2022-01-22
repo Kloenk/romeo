@@ -63,9 +63,16 @@ defmodule Romeo.Transports.TCP do
     |> negotiate_features()
     |> maybe_start_tls()
     |> authenticate()
-    |> bind()
-    |> session()
-    |> ready()
+    |> case do
+         {:ok, conn} ->
+           conn
+           |> bind()
+           |> session()
+           |> ready()
+         {:error, %{owner: owner}} = e ->
+           Kernel.send(owner, {:auth_failure})
+           e
+       end
   end
 
   defp start_stream(%Conn{jid: jid} = conn, xmlns \\ @ns_jabber_client) do
@@ -105,10 +112,16 @@ defmodule Romeo.Transports.TCP do
 
   defp authenticate(%Conn{} = conn) do
     conn
-    |> Romeo.Auth.authenticate!
-    |> reset_parser
-    |> start_stream
-    |> negotiate_features
+    |> Romeo.Auth.authenticate
+    |> case do
+         {:ok, conn} ->
+           conn = conn
+           |> reset_parser
+           |> start_stream
+           |> negotiate_features
+           {:ok, conn}
+         {:error, _} = error -> error
+       end
   end
 
   defp handshake(%Conn{} = conn) do
@@ -122,19 +135,28 @@ defmodule Romeo.Transports.TCP do
     conn
     |> send(stanza)
     |> recv(fn conn, xmlel(name: "iq") = stanza ->
-      "result" = Romeo.XML.attr(stanza, "type")
-      ^id = Romeo.XML.attr(stanza, "id")
+      with {:type, "result"} <- {:type, Romeo.XML.attr(stanza, "type")},
+           {:id, ^id} <- {:id, Romeo.XML.attr(stanza, "id")}
+        do
+        %Romeo.JID{resource: resource} =
+          stanza
+          |> Romeo.XML.subelement("bind")
+          |> Romeo.XML.subelement("jid")
+          |> Romeo.XML.cdata
+          |> Romeo.JID.parse
+        Logger.info fn -> "Bound to resource: #{resource}" end
+        Kernel.send(owner, {:resource_bound, resource})
+        %{conn | resource: resource}
+          else
+        {:type, _} = t ->
+          Logger.warn("Failed to bound: #{inspect stanza}")
+          Kernel.send(owner, {:resource_bound_error, resource})
+          conn
+        {:id, _} = t ->
+          Logger.warn("Invalid id")
+          Kernel.send(owner, {:resource_bound_error, resource})
+      end
 
-      %Romeo.JID{resource: resource} =
-        stanza
-        |> Romeo.XML.subelement("bind")
-        |> Romeo.XML.subelement("jid")
-        |> Romeo.XML.cdata
-        |> Romeo.JID.parse
-
-      Logger.info fn -> "Bound to resource: #{resource}" end
-      Kernel.send(owner, {:resource_bound, resource})
-      %{conn | resource: resource}
     end)
   end
 
@@ -300,6 +322,7 @@ defmodule Romeo.Transports.TCP do
     end
   end
 
+  defp host(%Romeo.JID{server: server}), do: server
   defp host(jid) do
     Romeo.JID.parse(jid).server
   end

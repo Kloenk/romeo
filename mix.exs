@@ -19,7 +19,7 @@ defmodule Romeo.Mixfile do
   end
 
   def application do
-    [applications: [:logger, :connection, :fast_xml],
+    [applications: [:logger, :connection, :fast_xml, :crypto],
      mod: {Romeo, []}]
   end
 

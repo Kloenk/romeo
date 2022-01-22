@@ -29,6 +29,14 @@ defmodule Romeo.ConnectionTest do
     assert_receive :connection_ready
   end
 
+  test "connection invalid login", %{romeo: romeo} do
+    romeo = Keyword.put(romeo, :password, "invalid")
+
+    {:ok, pid} = Romeo.Connection.start_link(romeo)
+
+    assert_receive {:auth_failure}
+  end
+
   test "sending presence", %{romeo: romeo} do
     {:ok, pid} = Romeo.Connection.start_link(romeo)
 

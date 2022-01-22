@@ -13,6 +13,7 @@ defmodule UserHelper do
     {tls, _opts} = Keyword.pop(opts, :tls, false)
 
     register_user(username, password)
+    verify_user(username)
 
     [jid: username <> "@localhost",
      password: password,
@@ -32,5 +33,15 @@ defmodule UserHelper do
   def setup_presence_subscriptions(user1, user2) do
     :mod_admin_extra.add_rosteritem(user1, "localhost", user2, "localhost", user2, "buddies", "both")
     :mod_admin_extra.add_rosteritem(user2, "localhost", user1, "localhost", user1, "buddies", "both")
+  end
+
+  def verify_user(username) do
+    :eja
+    member? = :ejabberd_admin.registered_users("localhost")
+    |> Enum.member?(username)
+
+    if !member? do
+      raise "User #{username} could not be registered"
+    end
   end
 end

@@ -25,10 +25,18 @@ defmodule Romeo.Auth do
 
   If the preferred mechanism is not supported it will choose PLAIN.
   """
-  def authenticate!(conn) do
+  def authenticate(conn) do
     preferred  = conn.preferred_auth_mechanisms
     mechanisms = conn.features.mechanisms
     preferred_mechanism(preferred, mechanisms) |> do_authenticate(conn)
+  end
+
+  def authenticate!(conn) do
+    authenticate(conn)
+    |> case do
+         {:ok, conn} -> conn
+         {:error, _conn} -> raise Romeo.Auth.Error, conn.features.mechanisms
+       end
   end
 
   def handshake!(%{transport: mod, password: password, stream_id: stream_id} = conn) do
@@ -49,20 +57,19 @@ defmodule Romeo.Auth do
 
 
   defp do_authenticate(mechanism, conn) do
-    {:ok, conn} =
-      case mechanism do
-        {name, mod} ->
-          Logger.info fn -> "Authenticating with extension #{name} implemented by #{mod}" end
-          mod.authenticate(name, conn)
-        _ ->
-          Logger.info fn -> "Authenticating with #{mechanism}" end
-          authenticate_with(mechanism, conn)
-      end
-
-    case success?(conn) do
-      {:ok, conn} -> conn
-      {:error, _conn} -> raise Romeo.Auth.Error, mechanism
+    case mechanism do
+      {name, mod} ->
+        Logger.info fn -> "Authenticating with extension #{name} implemented by #{mod}" end
+        mod.authenticate(name, conn)
+      _ ->
+        Logger.info fn -> "Authenticating with #{mechanism}" end
+        authenticate_with(mechanism, conn)
     end
+    |> case do
+         {:ok, conn} ->
+           success?(conn)
+         e -> e
+       end
   end
 
   defp authenticate_with("PLAIN", %{transport: mod} = conn) do
@@ -77,14 +84,15 @@ defmodule Romeo.Auth do
   end
 
   defp authenticate_with(mechanism_name, _conn) do
-    raise """
+    Logger.warn("""
       Romeo does not include an implementation for authentication mechanism #{inspect mechanism_name}.
       Please provide an implementation such as
 
         Romeo.Connection.start_link(preferred_auth_mechanisms: [{#{inspect mechanism_name}, SomeModule}])
 
       where `SomeModule` implements the Romeo.Auth.Mechanism behaviour.
-    """
+    """)
+    {:error, :unsupported_mechanism}
   end
 
   defp success?(%{transport: mod} = conn) do
@@ -99,6 +107,7 @@ defmodule Romeo.Auth do
     end)
   end
 
+  defp get_client_credentials(%{jid: %Romeo.JID{user: user}, password: password}), do: [user, password]
   defp get_client_credentials(%{jid: jid, password: password}) do
     [Romeo.JID.parse(jid).user, password]
   end
